@@ -592,17 +592,6 @@ export default function ShiftScheduleGenerator() {
             <CheckCircle className="h-4 w-4" />
             <AlertDescription>
               Perfect schedule generated with no violations!
-              <div className="mt-2">
-                <Button 
-                  onClick={handleExportToExcel} 
-                  variant="outline" 
-                  size="sm"
-                  className="mr-2"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export to Excel
-                </Button>
-              </div>
             </AlertDescription>
           </Alert>
         )}
