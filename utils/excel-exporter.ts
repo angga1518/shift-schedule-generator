@@ -82,6 +82,9 @@ export class ExcelExporter {
             assignment = 'LT'
           } else if (person.requestedAnnualLeaves.includes(day)) {
             assignment = 'CT'
+          } else {
+            // Fill gaps with 'L' (leave)
+            assignment = 'L'
           }
         }
         
@@ -91,35 +94,29 @@ export class ExcelExporter {
       dataRows.push(row)
     })
     
-    // Add separator row if there are non-shift personnel
-    if (nonShiftPersonnel.length > 0) {
-      const separatorRow: (string | number)[] = ['', 'NON SHIFT']
-      for (let day = 1; day <= daysInMonth; day++) {
-        separatorRow.push('')
-      }
-      dataRows.push(separatorRow)
+    // Add non-shift personnel rows
+    nonShiftPersonnel.forEach((person, index) => {
+      const row: (string | number)[] = ['', `NON SHIFT ${index + 1}`]
       
-      // Add non-shift personnel rows
-      nonShiftPersonnel.forEach(person => {
-        const row: (string | number)[] = ['', person.name]
+      // Add assignments for each day
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateString = format(new Date(year, month - 1, day), "yyyy-MM-dd")
+        const daySchedule = this.schedule[dateString]
         
-        // Add assignments for each day
-        for (let day = 1; day <= daysInMonth; day++) {
-          const dateString = format(new Date(year, month - 1, day), "yyyy-MM-dd")
-          const daySchedule = this.schedule[dateString]
-          
-          let assignment = ''
-          
-          if (daySchedule && daySchedule.P.includes(person.id)) {
-            assignment = 'P'
-          }
-          
-          row.push(assignment)
+        let assignment = ''
+        
+        if (daySchedule && daySchedule.P.includes(person.id)) {
+          assignment = 'P'
+        } else {
+          // Fill non-shift personnel gaps with empty string or 'P' only
+          assignment = ''
         }
         
-        dataRows.push(row)
-      })
-    }
+        row.push(assignment)
+      }
+      
+      dataRows.push(row)
+    })
     
     // Combine all rows
     const allRows = [headerRow1, headerRow2, ...dataRows]
@@ -130,7 +127,7 @@ export class ExcelExporter {
     // Set column widths
     const columnWidths = [
       { wch: 5 },  // NO column
-      { wch: 15 }, // NAMA column
+      { wch: 20 }, // NAMA column (increased for "NON SHIFT X")
     ]
     
     // Add width for each day column
@@ -140,47 +137,92 @@ export class ExcelExporter {
     
     worksheet['!cols'] = columnWidths
     
-    // Add some basic styling (merge header cells)
-    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
-    
-    // Merge cells for header row
-    const merges = []
-    for (let col = 2; col < range.e.c + 1; col++) { // Start from column C (index 2)
-      merges.push({
-        s: { r: 0, c: col }, // Start row 0 (first header)
-        e: { r: 0, c: col }  // End same cell (no actual merge needed for single cells)
-      })
-    }
-    
-    worksheet['!merges'] = merges
+    // Apply formatting
+    this.applyFormatting(worksheet, year, month, daysInMonth, shiftPersonnel.length, nonShiftPersonnel.length)
     
     return worksheet
   }
 
   /**
-   * Get schedule summary for debugging
+   * Apply formatting to the worksheet
    */
-  getScheduleSummary(): { [key: string]: any } {
-    const [year, month] = this.config.month.split("-").map(Number)
-    const daysInMonth = getDaysInMonth(new Date(year, month - 1))
+  private applyFormatting(
+    worksheet: XLSX.WorkSheet, 
+    year: number, 
+    month: number, 
+    daysInMonth: number,
+    shiftPersonnelCount: number,
+    nonShiftPersonnelCount: number
+  ): void {
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
     
-    const summary: { [key: string]: any } = {}
+    // Define styles
+    const orangeFill = {
+      patternType: 'solid',
+      fgColor: { rgb: 'FFA500' }
+    }
     
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateString = format(new Date(year, month - 1, day), "yyyy-MM-dd")
-      const daySchedule = this.schedule[dateString]
-      
-      if (daySchedule) {
-        summary[dateString] = {
-          P: daySchedule.P.length,
-          S: daySchedule.S.length,
-          M: daySchedule.M.length,
-          total: daySchedule.P.length + daySchedule.S.length + daySchedule.M.length
+    const redFont = {
+      color: { rgb: 'FF0000' }
+    }
+    
+    // Apply formatting to cells
+    for (let row = 2; row <= range.e.r; row++) { // Start from row 2 (after headers)
+      for (let col = 2; col <= range.e.c; col++) { // Start from column 2 (after NO and NAMA)
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+        const cell = worksheet[cellAddress]
+        
+        if (cell) {
+          const day = col - 1 // Convert column to day (col 2 = day 1)
+          const date = new Date(year, month - 1, day)
+          const dayOfWeek = date.getDay() // 0 = Sunday, 6 = Saturday
+          
+          // Check if it's weekend
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+          
+          // Check if it's a public holiday
+          const isHoliday = this.config.publicHolidays.includes(day)
+          
+          // Initialize cell style if it doesn't exist
+          if (!cell.s) cell.s = {}
+          
+          // Apply orange background for leaves (L, LT, CT)
+          if (cell.v === 'L' || cell.v === 'LT' || cell.v === 'CT') {
+            cell.s.fill = orangeFill
+          }
+          
+          // Apply red font for weekends and holidays
+          if (isWeekend || isHoliday) {
+            cell.s.font = redFont
+          }
         }
       }
     }
     
-    return summary
+    // Also format header cells for weekends/holidays
+    for (let col = 2; col <= range.e.c; col++) {
+      const day = col - 1
+      const date = new Date(year, month - 1, day)
+      const dayOfWeek = date.getDay()
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+      const isHoliday = this.config.publicHolidays.includes(day)
+      
+      if (isWeekend || isHoliday) {
+        // Format header row 1 (day numbers)
+        const headerCell1 = worksheet[XLSX.utils.encode_cell({ r: 0, c: col })]
+        if (headerCell1) {
+          if (!headerCell1.s) headerCell1.s = {}
+          headerCell1.s.font = redFont
+        }
+        
+        // Format header row 2 (day names)
+        const headerCell2 = worksheet[XLSX.utils.encode_cell({ r: 1, c: col })]
+        if (headerCell2) {
+          if (!headerCell2.s) headerCell2.s = {}
+          headerCell2.s.font = redFont
+        }
+      }
+    }
   }
 }
 
