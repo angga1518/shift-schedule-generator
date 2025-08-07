@@ -19,6 +19,7 @@ import { usePersonnel } from "@/hooks/use-personnel"
 import { dummyConfig, dummyPersonnel, hardDummyPersonnel } from "@/utils/dummy-data"
 
 import { ScheduleGenerator } from "@/utils/schedule-generator"
+import { ApiScheduleGenerator } from "@/utils/api-schedule-generator"
 import { ScheduleValidator } from "@/utils/validator"
 import { calculateStats } from "@/utils/statistics"
 import { generateAIPrompt } from "@/utils/prompt-generator"
@@ -84,6 +85,37 @@ export default function ShiftScheduleGenerator() {
       
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate schedule")
+      setSchedule({}) // Clear schedule on error
+      setViolations([])
+    } finally {
+      setIsGenerating(false)
+      setCurrentAttempt(0)
+    }
+  }
+
+  const handleGenerateScheduleAPI = async () => {
+    setIsGenerating(true)
+    setError("")
+    setSuccess(false)
+    setSchedule({})
+    setViolations([])
+    setCurrentAttempt(0)
+
+    // Use a timeout to allow the UI to update to "Generating..."
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    try {
+      const apiGenerator = new ApiScheduleGenerator(config, personnel)
+      const generatedSchedule = await apiGenerator.generateSchedule()
+      
+      setSchedule(generatedSchedule)
+      setViolations([]) // API doesn't return violations in the same format
+      setSuccess(true)
+      
+      console.log("Schedule generated via API successfully!")
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate schedule via API")
       setSchedule({}) // Clear schedule on error
       setViolations([])
     } finally {
@@ -435,6 +467,19 @@ export default function ShiftScheduleGenerator() {
               {isGenerating 
                 ? `Generating... ${currentAttempt > 0 ? `(Attempt ${currentAttempt}/10)` : ""}`
                 : "Generate Automatically"
+              }
+            </Button>
+            
+            <Button 
+              onClick={handleGenerateScheduleAPI} 
+              disabled={isGenerating} 
+              variant="secondary"
+              size="lg" 
+              className="px-12 py-3"
+            >
+              {isGenerating 
+                ? "Generating via API..."
+                : "Generate via API"
               }
             </Button>
             
