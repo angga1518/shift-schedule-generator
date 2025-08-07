@@ -35,7 +35,8 @@ export interface ApiErrorResponse {
 }
 
 export class ApiScheduleGenerator {
-    private readonly API_URL = 'https://be-shift-schedule-generator.onrender.com/api/generate-schedule'
+    private readonly BASE_URL = 'https://be-shift-schedule-generator.onrender.com'
+    private readonly API_URL = `${this.BASE_URL}/api/generate-schedule`
 
     constructor(
         private config: Config,
@@ -111,6 +112,27 @@ export class ApiScheduleGenerator {
                 throw error
             } else {
                 throw new Error('Failed to generate schedule via API')
+            }
+        }
+    }
+
+    async wakeUpApi(): Promise<void> {
+        try {
+            const response = await fetch(this.BASE_URL, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+
+            if (!response.ok) {
+                throw new Error(`Failed to wake up API: ${response.statusText}`)
+            }
+        } catch (error) {
+            if (error instanceof Error) {
+                console.error('Error waking up API:', error.message)
+            } else {
+                console.error('Unknown error waking up API')
             }
         }
     }

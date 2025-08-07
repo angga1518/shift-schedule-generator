@@ -52,6 +52,23 @@ export default function ShiftScheduleGenerator() {
   // Ensure component is mounted on client before rendering interactive content
   useEffect(() => {
     setIsMounted(true)
+    
+    // Wake up the API when the component mounts
+    const wakeUpAPI = async () => {
+      try {
+        // Create a temporary instance just for waking up the API
+        const tempGenerator = new ApiScheduleGenerator(
+          { month: '', publicHolidays: [], specialDates: [], maxNightShifts: 9, maxDefaultLeaves: 10 },
+          []
+        )
+        await tempGenerator.wakeUpApi()
+        console.log('API wake-up call completed')
+      } catch (error) {
+        console.log('API wake-up failed, but this is not critical:', error)
+      }
+    }
+    
+    wakeUpAPI()
   }, [])
 
   const handleGenerateSchedule = async () => {
