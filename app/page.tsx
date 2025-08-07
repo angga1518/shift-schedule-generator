@@ -479,14 +479,26 @@ export default function ShiftScheduleGenerator() {
         <div className="text-center py-4 space-y-4">
           <div className="space-x-4">
             <Button 
-              onClick={handleGenerateScheduleAPI} 
+              onClick={handleGenerateSchedule} 
               disabled={isGenerating} 
               size="lg" 
               className="px-12 py-3"
             >
               {isGenerating 
+                ? `Generating... ${currentAttempt > 0 ? `(Attempt ${currentAttempt}/20)` : ""}`
+                : "Generate Random Schedule"
+              }
+            </Button>
+            <Button 
+              onClick={handleGenerateScheduleAPI} 
+              disabled={isGenerating}
+              variant={"outline"} 
+              size="lg" 
+              className="px-12 py-3"
+            >
+              {isGenerating 
                 ? "Generating..."
-                : "Generate"
+                : "Generate with Machine Learning"
               }
             </Button>
             

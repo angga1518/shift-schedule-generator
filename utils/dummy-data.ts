@@ -3,13 +3,13 @@ import type { Config, Personnel } from "@/types"
 
 export const dummyConfig: Config = {
   month: "2025-09", // September 2025
-  publicHolidays: [17],
+  publicHolidays: [5],
   specialDates: [
     {
       id: "1",
       date: "2025-09-20",
-      P: 1,
-      S: 1,
+      P: 2,
+      S: 2,
       M: 3,
     },
   ],
