@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle, Copy, ExternalLink } from "lucide-react"
+import { AlertCircle, CheckCircle, Copy, ExternalLink, Download } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
@@ -20,6 +20,7 @@ import { dummyConfig, dummyPersonnel, hardDummyPersonnel } from "@/utils/dummy-d
 
 import { ScheduleGenerator } from "@/utils/schedule-generator"
 import { ApiScheduleGenerator } from "@/utils/api-schedule-generator"
+import { ExcelExporter } from "@/utils/excel-exporter"
 import { ScheduleValidator } from "@/utils/validator"
 import { calculateStats } from "@/utils/statistics"
 import { generateAIPrompt } from "@/utils/prompt-generator"
@@ -121,6 +122,25 @@ export default function ShiftScheduleGenerator() {
     } finally {
       setIsGenerating(false)
       setCurrentAttempt(0)
+    }
+  }
+
+  const handleExportToExcel = () => {
+    try {
+      const exporter = new ExcelExporter(schedule, personnel, config)
+      exporter.exportToExcel()
+      
+      toast({
+        title: "Success!",
+        description: "Schedule exported to Excel successfully.",
+      })
+    } catch (err) {
+      console.error('Failed to export to Excel:', err)
+      toast({
+        title: "Export failed",
+        description: "Failed to export schedule to Excel.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -459,27 +479,14 @@ export default function ShiftScheduleGenerator() {
         <div className="text-center py-4 space-y-4">
           <div className="space-x-4">
             <Button 
-              onClick={handleGenerateSchedule} 
-              disabled={isGenerating} 
-              size="lg" 
-              className="px-12 py-3"
-            >
-              {isGenerating 
-                ? `Generating... ${currentAttempt > 0 ? `(Attempt ${currentAttempt}/10)` : ""}`
-                : "Generate Automatically"
-              }
-            </Button>
-            
-            <Button 
               onClick={handleGenerateScheduleAPI} 
               disabled={isGenerating} 
-              variant="secondary"
               size="lg" 
               className="px-12 py-3"
             >
               {isGenerating 
-                ? "Generating via API..."
-                : "Generate via API"
+                ? "Generating..."
+                : "Generate"
               }
             </Button>
             
@@ -583,7 +590,20 @@ export default function ShiftScheduleGenerator() {
         {success && violations.length === 0 && (
           <Alert>
             <CheckCircle className="h-4 w-4" />
-            <AlertDescription>Perfect schedule generated with no violations!</AlertDescription>
+            <AlertDescription>
+              Perfect schedule generated with no violations!
+              <div className="mt-2">
+                <Button 
+                  onClick={handleExportToExcel} 
+                  variant="outline" 
+                  size="sm"
+                  className="mr-2"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export to Excel
+                </Button>
+              </div>
+            </AlertDescription>
           </Alert>
         )}
 
@@ -592,7 +612,7 @@ export default function ShiftScheduleGenerator() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               Schedule generated with {violations.length} violation(s). You can retry to get a better result.
-              <div className="mt-2">
+              <div className="mt-2 space-x-2">
                 <Button 
                   onClick={handleGenerateSchedule} 
                   disabled={isGenerating} 
@@ -600,6 +620,14 @@ export default function ShiftScheduleGenerator() {
                   size="sm"
                 >
                   {isGenerating ? "Retrying..." : "Retry Generation"}
+                </Button>
+                <Button 
+                  onClick={handleExportToExcel} 
+                  variant="outline" 
+                  size="sm"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export to Excel
                 </Button>
               </div>
             </AlertDescription>
@@ -628,7 +656,20 @@ export default function ShiftScheduleGenerator() {
 
         {/* Results Section */}
         {(success || Object.keys(schedule).length > 0) && (
-          <ResultsSection personnel={personnel} schedule={schedule} stats={stats} config={config} />
+          <div className="space-y-4">
+            <div className="text-center">
+              <Button 
+                onClick={handleExportToExcel} 
+                variant="default"
+                size="lg"
+                className="px-8 py-2"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export to Excel
+              </Button>
+            </div>
+            <ResultsSection personnel={personnel} schedule={schedule} stats={stats} config={config} />
+          </div>
         )}
 
         {/* Rules Reference */}
