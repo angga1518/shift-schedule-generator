@@ -40,7 +40,7 @@ export function ConfigSection({
       </CardHeader>
       <CardContent className="space-y-8">
         {/* Basic Configuration */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="space-y-3">
             <Label htmlFor="month">Month & Year</Label>
             <div className="relative">
@@ -71,6 +71,23 @@ export function ConfigSection({
               value={config.maxDefaultLeaves}
               onChange={(e) => setConfig({ ...config, maxDefaultLeaves: Number.parseInt(e.target.value) })}
             />
+          </div>
+          <div className="space-y-3">
+            <Label htmlFor="maxNonShift">Max Non-Shift Personnel</Label>
+            <Input
+              id="maxNonShift"
+              type="number"
+              placeholder="No limit"
+              value={config.maxNonShift || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                setConfig({
+                  ...config,
+                  maxNonShift: value === "" ? null : Number.parseInt(value)
+                });
+              }}
+            />
+            <p className="text-xs text-gray-500">Leave empty for no limit</p>
           </div>
         </div>
 

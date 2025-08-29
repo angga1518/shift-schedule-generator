@@ -125,13 +125,20 @@ export default function ShiftScheduleGenerator() {
     try {
       const apiGenerator = new ApiScheduleGenerator(config, personnel)
       const generatedSchedule = await apiGenerator.generateSchedule()
-      
+
+      // Validate the API-generated schedule against local constraints
+      const validationResult = validateApiSchedule(generatedSchedule, config, personnel)
+
       setSchedule(generatedSchedule)
-      setViolations([]) // API doesn't return violations in the same format
+      setViolations(validationResult.violations || [])
       setSuccess(true)
-      
-      console.log("Schedule generated via API successfully!")
-      
+
+      if (validationResult.violations && validationResult.violations.length > 0) {
+        console.log(`API Schedule generated with ${validationResult.violations.length} violations`)
+      } else {
+        console.log("Perfect API schedule generated!")
+      }
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate schedule via API")
       setSchedule({}) // Clear schedule on error
@@ -234,6 +241,22 @@ export default function ShiftScheduleGenerator() {
       
     } catch (err) {
       setAiImportError(err instanceof Error ? err.message : "Failed to parse JSON")
+    }
+  }
+
+  const validateApiSchedule = (schedule: Schedule, config: Config, personnel: Personnel[]) => {
+    const [year, month] = config.month.split("-").map(Number)
+    const daysInMonth = getDaysInMonth(new Date(year, month - 1))
+
+    // Convert schedule format for internal validation
+    const internalSchedule = convertScheduleToInternalFormat(schedule, personnel, year, month - 1, daysInMonth)
+
+    // Use existing ScheduleValidator for comprehensive business rule validation
+    const validator = new ScheduleValidator(config, personnel, internalSchedule, year, month - 1, daysInMonth)
+    const violations = validator.validateFinalSchedule()
+
+    return {
+      violations: violations.length > 0 ? violations : undefined
     }
   }
 
@@ -409,6 +432,7 @@ export default function ShiftScheduleGenerator() {
       specialDates: [],
       maxNightShifts: 9,
       maxDefaultLeaves: 10,
+      maxNonShift: null,
     })
     
     // Reset personnel to empty

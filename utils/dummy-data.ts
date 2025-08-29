@@ -15,6 +15,7 @@ export const dummyConfig: Config = {
   ],
   maxNightShifts: 9,
   maxDefaultLeaves: 10,
+  maxNonShift: 2, // Max 2 non-shift personnel per day
 }
 
 export const dummyPersonnel: Personnel[] = [

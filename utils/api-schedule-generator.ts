@@ -19,6 +19,7 @@ export interface ApiScheduleRequest {
         }>
         max_night_shifts: number
         max_default_leaves: number
+        max_non_shift?: number | null
     }
 }
 
@@ -35,7 +36,7 @@ export interface ApiErrorResponse {
 }
 
 export class ApiScheduleGenerator {
-    private readonly BASE_URL = 'https://be-shift-schedule-generator.onrender.com'
+    private readonly BASE_URL = 'http://127.0.0.1:8000'
     private readonly API_URL = `${this.BASE_URL}/api/generate-schedule`
 
     constructor(
@@ -74,7 +75,8 @@ export class ApiScheduleGenerator {
                 public_holidays: this.config.publicHolidays,
                 special_dates: apiSpecialDates,
                 max_night_shifts: this.config.maxNightShifts,
-                max_default_leaves: this.config.maxDefaultLeaves
+                max_default_leaves: this.config.maxDefaultLeaves,
+                max_non_shift: this.config.maxNonShift
             }
         }
     }

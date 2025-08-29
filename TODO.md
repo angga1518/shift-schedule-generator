@@ -1,51 +1,129 @@
-# TODO: Add an AI-Assisted Generation Option
+# 🔄 **API Changes Summary - Medical Shift Schedule Generator**
 
-This checklist outlines the tasks to add a new, alternative schedule generation method.
-The existing automated generator will be kept as the primary, fast option.
-The new method will be a manual workflow using an external LLM (like Gemini) as an
-advanced option for complex scenarios.
+## 📋 **Overview**
+Two new features have been implemented to improve the robustness and flexibility of the scheduling system:
 
-## Phase 1: UI Updates for Multiple Generation Methods
+1. **INFEASIBLE Handling** - Always returns a solution even when constraints cannot be fully satisfied
+2. **Max Non-Shift Personnel** - New parameter to limit non-shift personnel usage
+
+## 🚀 **New Features**
+
+### 1. **INFEASIBLE Handling Enhancement**
+**What Changed:**
+- System now attempts multiple solving strategies when encountering INFEASIBLE problems
+- Always returns a JSON response instead of throwing errors
+- Uses relaxed constraints as fallback to find any feasible solution
+
+**Impact on Frontend:**
+- ✅ **No changes required** - API still returns the same JSON structure
+- ✅ **More reliable** - System won't fail with 422 errors for complex scenarios
+- ✅ **Better UX** - Users always get a schedule, even if some constraints are violated
+
+### 2. **Max Non-Shift Personnel Parameter**
+**What Changed:**
+- Added new optional parameter `max_non_shift` to `ScheduleConfig`
+- Limits how many non-shift personnel can work per day
+- `null` or omitted = no limit (default behavior)
+
+**Impact on Frontend:**
+- 🔧 **Requires API request update** - Add `max_non_shift` parameter
+- ✅ **Backward compatible** - Existing requests work without changes
+- ✅ **Flexible control** - Can set limits per scheduling request
+
+## 📝 **Updated API Request Format**
+
+### **New Request Structure:**
+```json
+{
+  "personnel": [
+    {
+      "id": 1,
+      "name": "Dr. Smith",
+      "role": "shift",
+      "requested_leaves": [],
+      "extra_leaves": [],
+      "annual_leaves": []
+    }
+  ],
+  "config": {
+    "month": "2025-09",
+    "public_holidays": [17],
+    "max_night_shifts": 9,
+    "max_non_shift": 2,        // 🆕 NEW: Max 2 non-shift personnel per day
+    "special_dates": {
+      "2025-09-20": {
+        "P": 1,
+        "S": 1,
+        "M": 3
+      }
+    }
+  }
+}
+```
+
+### **Backward Compatible (No Changes Needed):**
+```json
+{
+  "config": {
+    "month": "2025-09",
+    "public_holidays": [17],
+    "max_night_shifts": 9
+    // max_non_shift omitted = no limit
+  }
+}
+```
+
+## 🔧 **Frontend Integration Guide**
+
+### **Required Changes:**
+1. **Add max_non_shift field** to your form/config UI
+2. **Update API request** to include the parameter when needed
+3. **Handle response** as usual (same JSON structure)
+
+### **Example Frontend Code:**
+```javascript
+// New request with non-shift limit
+const requestData = {
+  personnel: personnelData,
+  config: {
+    month: selectedMonth,
+    public_holidays: holidays,
+    max_night_shifts: 9,
+    max_non_shift: nonShiftLimit || null,  // Add this field
+    special_dates: specialDates
+  }
+};
+
+// Existing request (no changes needed)
+const requestData = {
+  personnel: personnelData,
+  config: {
+    month: selectedMonth,
+    public_holidays: holidays,
+    max_night_shifts: 9
+    // max_non_shift automatically null
+  }
+};
+```
+
+## ✅ **Testing Results**
+- ✅ **INFEASIBLE scenarios**: System returns solutions with relaxed constraints
+- ✅ **max_non_shift=1**: Correctly limits to 1 non-shift worker per day
+- ✅ **Backward compatibility**: Existing API calls work unchanged
+- ✅ **Performance**: No significant impact on response times
+
+## 📊 **Migration Timeline**
+- **Immediate**: No urgent changes required
+- **When convenient**: Add max_non_shift parameter to your forms
+- **Optional**: Update UI to show non-shift personnel limits
+
+## 🎯 **Benefits for Users**
+1. **More Reliable**: System won't fail on complex scheduling scenarios
+2. **Better Control**: Can limit non-shift personnel usage as needed
+3. **Flexible**: Optional parameter doesn't break existing workflows
+4. **Future-Proof**: Enhanced solver handles edge cases gracefully
+
 ---
-[ ] 1. **Provide two distinct generation buttons in `page.tsx`.**
-   - Pertahankan tombol "Generate Schedule" yang ada. Mungkin bisa diubah namanya menjadi "Generate Automatically" untuk lebih jelas. Fungsionalitasnya tetap sama, yaitu memanggil `handleGenerateSchedule`.
-   - Tambahkan tombol baru di sebelahnya, misalnya "Generate with AI Assistant".
-
-[ ] 2. **Create the UI flow for the AI Assistant.**
-   - Saat tombol "Generate with AI Assistant" diklik, tampilkan sebuah modal atau area baru di halaman.
-   - Area ini harus berisi:
-     - Sebuah text area read-only untuk menampilkan prompt yang akan di-generate (`<pre><code>` block direkomendasikan).
-     - Tombol "Copy Prompt".
-     - Link/tombol untuk membuka AI chat (Gemini, ChatGPT, and Claude).
-     - Sebuah text area input untuk pengguna menempelkan (paste) hasil JSON dari AI.
-     - Tombol "Import and Display Schedule" untuk memproses JSON yang ditempelkan.
-
-## Phase 2: Implementing the AI-Assisted Workflow Logic
----
-[ ] 1. **Create the prompt generation utility.**
-   - (Sama seperti sebelumnya) Buat file baru, misal `utils/prompt-generator.ts` yang mengekspor fungsi `generatePrompt(config, personnel)`.
-   - Fungsi ini harus membangun string prompt yang komprehensif berisi semua instruksi, data (config & personnel), dan semua aturan yang ada.
-   - Jelaskan juga format JSON yang diharapkan sebagai output dari AI.
-
-[ ] 2. **Implement the logic for handling the AI's JSON response.**
-   - Di `page.tsx`, buat fungsi baru `handleImportSchedule()`.
-   - Fungsi ini akan:
-     - Mengambil string dari text area input JSON.
-     - Mem-parsing string tersebut menggunakan `JSON.parse()` di dalam `try...catch` block untuk menangani error format.
-     - Memvalidasi struktur JSON yang sudah di-parsing.
-     - Menggunakan kelas `ScheduleValidator` yang sudah ada untuk memeriksa apakah jadwal dari AI melanggar aturan.
-     - Memperbarui state `schedule` dan `violations` dengan data yang sudah divalidasi, lalu menampilkan hasilnya di UI.
-
-## Phase 3: Code Integration and Finalization
----
-[ ] 1. **Ensure both workflows coexist without conflict.**
-   - Pastikan semua file yang ada (`schedule-generator.ts`, `constraint-checker.ts`, `personnel-selector.ts`, `validator.ts`) tetap ada dan tidak diubah, karena masih digunakan oleh alur "Generate Automatically".
-   - State seperti `isGenerating` dan `currentAttempt` juga tetap dipertahankan untuk alur kerja otomatis.
-
-[ ] 2. **Connect the new UI elements to their respective functions.**
-   - Hubungkan tombol "Generate with AI Assistant" untuk memanggil `generatePrompt` dan menampilkan UI prompt.
-   - Hubungkan tombol "Import and Display Schedule" ke fungsi `handleImportSchedule`.
-
-[ ] 3. **Testing.**
-   - Uji coba kedua alur kerja secara terpisah untuk memastikan keduanya berfungsi dengan benar.
-   - Pastikan pesan error dari kedua alur (misal, "gagal menemukan personel" dari generator otomatis vs "format JSON tidak valid" dari alur AI) dapat ditampilkan dengan baik kepada pengguna.
+**Status**: ✅ **IMPLEMENTED & TESTED**
+**Compatibility**: ✅ **BACKWARD COMPATIBLE**
+**Frontend Changes**: 🔧 **MINIMAL (API request only)**

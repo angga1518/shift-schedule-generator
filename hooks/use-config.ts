@@ -20,6 +20,7 @@ export function useConfig() {
     specialDates: [],
     maxNightShifts: 9,
     maxDefaultLeaves: 10,
+    maxNonShift: null,
   });
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export function useConfig() {
             specialDates: [],
             maxNightShifts: 9,
             maxDefaultLeaves: 10,
+            maxNonShift: null,
           })
       } catch (error) {
         console.error("Failed to load config from localStorage", error)
@@ -45,6 +47,7 @@ export function useConfig() {
           specialDates: [],
           maxNightShifts: 9,
           maxDefaultLeaves: 10,
+          maxNonShift: null,
         })
       }
     }

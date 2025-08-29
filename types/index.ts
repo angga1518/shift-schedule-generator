@@ -21,6 +21,7 @@ export interface Config {
   specialDates: SpecialDate[]
   maxNightShifts: number
   maxDefaultLeaves: number
+  maxNonShift?: number | null // Optional: Max non-shift personnel per day (null = no limit)
 }
 
 export interface Schedule {
